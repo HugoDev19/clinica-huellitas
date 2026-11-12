@@ -426,6 +426,37 @@ SQLite es la configuración predeterminada. Si ya tienes PostgreSQL instalado y 
 configura `DJANGO_DB_ENGINE=postgresql` y las variables `POSTGRES_DB`, `POSTGRES_USER`,
 `POSTGRES_PASSWORD`, `POSTGRES_HOST` y `POSTGRES_PORT` en el archivo `.env`.
 
+### Despliegue en Vercel con PostgreSQL
+
+El repositorio está preparado para desplegar el frontend estático y el backend Django como una
+función Python de Vercel. Vercel no proporciona almacenamiento persistente para SQLite; conecta una
+base PostgreSQL externa mediante una integración del Marketplace (por ejemplo, Neon).
+
+1. Importa el repositorio en Vercel y deja como **Root Directory** la raíz del repositorio.
+2. Agrega PostgreSQL desde **Storage / Marketplace Integrations** y conecta la integración al
+   proyecto. La integración debe exponer `DATABASE_URL` (también se acepta `POSTGRES_URL`).
+3. En **Settings → Environment Variables**, configura:
+   - `DJANGO_SECRET_KEY`: una clave secreta nueva y aleatoria.
+   - `DJANGO_DEBUG`: `false`.
+   - `DJANGO_ALLOWED_HOSTS`: `.vercel.app` y el dominio personalizado, si existe.
+   - `CORS_ALLOWED_ORIGINS`: el origen público del frontend si este se servirá desde otro dominio.
+   - `DATABASE_URL`: la URL PostgreSQL que entrega la integración; mantenla como variable secreta.
+4. Despliega. `vercel.json` construye `frontend/` y enruta `/api/...` hacia Django; las demás rutas
+   cargan la aplicación React.
+5. Aplica las migraciones a la base PostgreSQL de producción una sola vez. Desde `backend/`, en una
+   terminal local con `DATABASE_URL` de producción configurada como variable de entorno segura,
+   ejecuta:
+
+   ```powershell
+   .\.venv\Scripts\python.exe manage.py migrate
+   ```
+
+   No agregues credenciales a `.env.example`, a `vercel.json` ni al repositorio. Vercel debe tener
+   la URL en sus variables de entorno y el archivo `.env` local debe permanecer ignorado por Git.
+
+La función usa conexiones de corta duración para ajustarse al entorno serverless. Para desarrollo
+local, la configuración continúa usando SQLite si no se define `DATABASE_URL`.
+
 ## Pruebas
 
 ```powershell

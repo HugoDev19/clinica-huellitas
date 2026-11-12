@@ -1,14 +1,31 @@
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR.parent / ".env")
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-in-production")
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if h.strip()]
+EN_VERCEL = os.environ.get("VERCEL") == "1"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if EN_VERCEL:
+        raise RuntimeError("Configura DJANGO_SECRET_KEY en las variables de entorno de Vercel.")
+    SECRET_KEY = "dev-secret-key-change-in-production"
+
+DEBUG = os.environ.get("DJANGO_DEBUG", "false" if EN_VERCEL else "true").lower() == "true"
+if EN_VERCEL:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+hosts_configurados = os.environ.get(
+    "DJANGO_ALLOWED_HOSTS",
+    ".vercel.app,localhost,127.0.0.1" if EN_VERCEL else "*",
+)
+ALLOWED_HOSTS = [host.strip() for host in hosts_configurados.split(",") if host.strip()]
+vercel_url = os.environ.get("VERCEL_URL")
+if vercel_url:
+    ALLOWED_HOSTS.append(vercel_url)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -58,13 +75,35 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DB_ENGINE = os.environ.get("DJANGO_DB_ENGINE", "sqlite3")
+DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+DB_ENGINE = "postgresql" if DATABASE_URL else os.environ.get("DJANGO_DB_ENGINE", "sqlite3")
 
 if DB_ENGINE == "sqlite3":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+elif DB_ENGINE == "postgresql" and DATABASE_URL:
+    parsed_database_url = urlparse(DATABASE_URL)
+    if parsed_database_url.scheme not in {"postgres", "postgresql"}:
+        raise ValueError("DATABASE_URL debe usar el esquema postgres:// o postgresql://.")
+
+    query = parse_qs(parsed_database_url.query)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": unquote(parsed_database_url.path.lstrip("/")),
+            "USER": unquote(parsed_database_url.username or ""),
+            "PASSWORD": unquote(parsed_database_url.password or ""),
+            "HOST": parsed_database_url.hostname or "",
+            "PORT": parsed_database_url.port or 5432,
+            "CONN_MAX_AGE": 0 if EN_VERCEL else 60,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                "sslmode": query.get("sslmode", ["require"])[0],
+            },
         }
     }
 elif DB_ENGINE == "postgresql":
@@ -76,6 +115,8 @@ elif DB_ENGINE == "postgresql":
             "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "huellitas"),
             "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
             "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+            "CONN_MAX_AGE": 0 if EN_VERCEL else 60,
+            "CONN_HEALTH_CHECKS": True,
         }
     }
 else:
@@ -122,6 +163,22 @@ CORS_ALLOWED_ORIGINS = [
     for o in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
     if o.strip()
 ]
+frontend_url = os.environ.get("FRONTEND_URL")
+if frontend_url:
+    CORS_ALLOWED_ORIGINS.append(frontend_url.rstrip("/"))
+
+if vercel_url:
+    CORS_ALLOWED_ORIGINS.append(f"https://{vercel_url}")
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if frontend_url:
+    CSRF_TRUSTED_ORIGINS.append(frontend_url.rstrip("/"))
+if vercel_url:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{vercel_url}")
 
 # --- Configuracion de negocio (Factory Method: eligen la implementacion ---
 # --- concreta de notificador y de politica de tarifa sin tocar el dominio) --
