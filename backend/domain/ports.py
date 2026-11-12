@@ -75,6 +75,10 @@ class RepositorioMascotas(ABC):
 
 class RepositorioVeterinarios(ABC):
     @abstractmethod
+    def agregar(self, veterinario: Veterinario) -> Veterinario:
+        raise NotImplementedError
+
+    @abstractmethod
     def obtener_por_id(self, veterinario_id: int) -> Optional[Veterinario]:
         raise NotImplementedError
 

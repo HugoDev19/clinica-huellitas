@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { Veterinario } from "@/domain/types";
 import { extraerMensajeError } from "@/infrastructure/apiClient";
-import { veterinariosApi } from "@/infrastructure/veterinariosApi";
+import { type CrearVeterinarioInput, veterinariosApi } from "@/infrastructure/veterinariosApi";
 
 export function useVeterinarios() {
   const [veterinarios, setVeterinarios] = useState<Veterinario[]>([]);
@@ -25,5 +25,13 @@ export function useVeterinarios() {
     recargar();
   }, [recargar]);
 
-  return { veterinarios, cargando, error, recargar };
+  const registrar = useCallback(async (input: CrearVeterinarioInput) => {
+    const veterinario = await veterinariosApi.crear(input);
+    setVeterinarios((anteriores) =>
+      [...anteriores, veterinario].sort((a, b) => a.codigo.localeCompare(b.codigo)),
+    );
+    return veterinario;
+  }, []);
+
+  return { veterinarios, cargando, error, recargar, registrar };
 }

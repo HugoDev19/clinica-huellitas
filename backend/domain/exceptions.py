@@ -66,3 +66,7 @@ class CitaNoEncontradaError(EntidadNoEncontradaError):
 
 class TutorDuplicadoError(DomainError):
     codigo = "TUTOR_DUPLICADO"
+
+
+class VeterinarioDuplicadoError(DomainError):
+    codigo = "VETERINARIO_DUPLICADO"

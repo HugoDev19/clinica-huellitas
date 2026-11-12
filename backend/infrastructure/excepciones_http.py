@@ -13,6 +13,7 @@ from domain.exceptions import (
     MascotaConCitasError,
     TransicionEstadoInvalidaError,
     TutorDuplicadoError,
+    VeterinarioDuplicadoError,
     VeterinarioNoDisponibleError,
 )
 
@@ -26,6 +27,7 @@ _CODIGOS_HTTP = {
     CancelacionNoPermitidaError: status.HTTP_409_CONFLICT,
     TransicionEstadoInvalidaError: status.HTTP_409_CONFLICT,
     TutorDuplicadoError: status.HTTP_409_CONFLICT,
+    VeterinarioDuplicadoError: status.HTTP_409_CONFLICT,
 }
 
 

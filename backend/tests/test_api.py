@@ -232,6 +232,30 @@ def test_documento_duplicado_devuelve_409(client):
     assert respuesta.data["error"] == "TUTOR_DUPLICADO"
 
 
+def test_crear_veterinario(client):
+    respuesta = client.post(
+        "/api/veterinarios/",
+        {"codigo": "vet-test-01", "nombre": "Diana Gómez"},
+        format="json",
+    )
+    assert respuesta.status_code == 201, respuesta.data
+    assert respuesta.data["codigo"] == "VET-TEST-01"
+    assert respuesta.data["nombre"] == "Diana Gómez"
+    assert respuesta.data["disponible"] is True
+
+
+def test_codigo_veterinario_duplicado_devuelve_409(client):
+    datos = {"codigo": "VET-DUP-API", "nombre": "Diana Gómez"}
+    assert client.post("/api/veterinarios/", datos, format="json").status_code == 201
+    respuesta = client.post(
+        "/api/veterinarios/",
+        {"codigo": "vet-dup-api", "nombre": "Otro nombre"},
+        format="json",
+    )
+    assert respuesta.status_code == 409
+    assert respuesta.data["error"] == "VETERINARIO_DUPLICADO"
+
+
 def test_mascota_inexistente_devuelve_404(client):
     respuesta = client.get("/api/mascotas/999999/")
     assert respuesta.status_code == 404
