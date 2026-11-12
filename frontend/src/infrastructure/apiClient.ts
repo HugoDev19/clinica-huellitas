@@ -2,7 +2,7 @@ import axios from "axios";
 import type { Paginado } from "@/domain/types";
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
+    baseURL: import.meta.env.PROD ? "/api" : (import.meta.env.VITE_API_BASE_URL ?? "/api"),
   headers: { "Content-Type": "application/json" },
 });
 
