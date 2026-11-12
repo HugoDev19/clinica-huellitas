@@ -76,6 +76,10 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+if EN_VERCEL and not DATABASE_URL:
+    raise RuntimeError(
+        "Configura DATABASE_URL en Vercel con la conexión de PostgreSQL de Neon."
+    )
 DB_ENGINE = "postgresql" if DATABASE_URL else os.environ.get("DJANGO_DB_ENGINE", "sqlite3")
 
 if DB_ENGINE == "sqlite3":
